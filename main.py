@@ -2,8 +2,6 @@ import os
 import json
 import asyncio
 import websockets
-import urllib.request
-import urllib.error
 from flask import Flask, request, render_template_string
 from threading import Thread
 
@@ -12,7 +10,7 @@ app = Flask(__name__)
 
 # المتغيرات اللي هتتغير من الـ Dashboard
 config = {
-    "custom_text": "ihh anyway",
+    "custom_text": "turns out, i’m not special as you made me feel, i'm even worse...",
     "ws_instance": None
 }
 
@@ -49,6 +47,7 @@ def home():
     if request.method == 'POST':
         config["custom_text"] = request.form.get('new_status')
         msg = "Status Updated! Restarting Connection..."
+        # بنقفل الاتصال الحالي عشان لما يعمل ريكونيكت يسحب الـ Status الجديدة
         if config["ws_instance"]:
             asyncio.run_coroutine_threadsafe(config["ws_instance"].close(), loop)
 
@@ -61,26 +60,6 @@ def run_flask():
 # --- كود الديسكورد الأساسي ---
 TOKEN = os.environ.get("TOKEN")
 APP_ID = "1341185241800245291"
-
-# 🔹 المعرفات الخاصة بالـ Seen التلقائي
-TARGET_CHANNEL = "1353447802889437357"
-TARGET_USER = "1249754394417696801"
-
-def send_ack(channel_id, message_id):
-    """إرسال طلب HTTP لقراءة الرسالة فورًا"""
-    url = f"https://discord.com/api/v9/channels/{channel_id}/messages/{message_id}/ack"
-    req = urllib.request.Request(url, method="POST")
-    req.add_header("Authorization", TOKEN)
-    req.add_header("Content-Type", "application/json")
-    
-    # ديسكورد بيطلب جسم فارغ أو توكن نل عشان يثبت القراءة
-    data = b'{"token": null}'
-    try:
-        with urllib.request.urlopen(req, data=data) as response:
-            if response.status in [200, 204]:
-                print(f"⚡ Auto-Seen triggered for message {message_id} in channel {channel_id}")
-    except Exception as e:
-        print(f"❌ Failed to send seen: {e}")
 
 async def heartbit(ws, interval):
     while True:
@@ -106,11 +85,11 @@ async def onliner():
                     "status": "dnd",
                     "activities": [
                         {
-                            "name": "𝖤𝗌𝖼𝖺𝗉𝗂่น𝗀 𝖱𝖾𝖺𝗅𝗂𝗍𝗒",
+                            "name": "𝖤𝗌𝖼𝖺𝗉𝗂𝗇𝗀 𝖱𝖾𝖺𝗅𝗂𝗍𝗒",
                             "type": 1,
                             "url": "https://twitch.tv/phantom053/about",
                             "application_id": APP_ID,
-                            "assets": {} 
+                            "assets": {} # بنسيبها فاضية عشان يسحب صورة الـ App ID
                         },
                         {
                             "name": "Custom Status",
@@ -125,24 +104,7 @@ async def onliner():
         }
         await ws.send(json.dumps(auth))
         print(f"✅ Active! Status: {config['custom_text']}")
-        
-        # 💣 حلقة استقبال الأحداث وفحص الرسائل الجديدة
-        while True:
-            msg = await ws.recv()
-            msg_data = json.loads(msg)
-            
-            # التأكد إن الحدث هو استقبال رسالة جديدة
-            if msg_data.get("op") == 0 and msg_data.get("t") == "MESSAGE_CREATE":
-                d = msg_data.get("d", {})
-                channel_id = d.get("channel_id")
-                author_id = d.get("author", {}).get("id")
-                message_id = d.get("id")
-                
-                # ⚠️ التحقق لو الرسالة مبعوتة من الشخص أو جوه الروم المحددة
-                if channel_id == TARGET_CHANNEL or author_id == TARGET_USER:
-                    current_loop = asyncio.get_event_loop()
-                    # تشغيل طلب الـ Seen في خلفية منفصلة عشان السكربت ما يقفش
-                    current_loop.run_in_executor(None, send_ack, channel_id, message_id)
+        while True: await ws.recv()
 
 async def main():
     while True:
