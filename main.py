@@ -12,7 +12,7 @@ app = Flask(__name__)
 
 # المتغيرات اللي هتتغير من الـ Dashboard
 config = {
-    "custom_text": "ihh anyway ------- break",
+    "custom_text": "ihh anyway",
     "ws_instance": None
 }
 
